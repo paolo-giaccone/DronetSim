@@ -17,7 +17,7 @@ class FES_management:
         #initialize the periodic messages events
         rnd_initial_time = []
         for i in range(1, self.N_UAV + 1):
-            rnd_initial_time.append(random.uniform(self.SIZE_JSON*8, self.SIZE_JSON * 8 * i))
+            rnd_initial_time.append(random.uniform(self.SIZE_JSON/1e5*8, self.SIZE_JSON/1e5 * 8 * i))
 
         # schedule synch. msg each of them is out of phase (the phase is random)
         for j in range(1, self.N_UAV + 1):
