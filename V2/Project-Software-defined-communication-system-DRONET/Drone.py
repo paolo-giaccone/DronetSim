@@ -68,23 +68,22 @@ class Drone:
         self.alpha_drone = 0
         self.FLAG_Interrupt = True # the drone has battery level different from 0
 
-######################################################################### DA VEDERE
         #communication
         self.queue = None
         self.size_jpg = 0
         self.queue = queue.PriorityQueue(maxsize=max_length_queue)
         self.pkt_lost_tot = 0
         self.pkt_lost_queue_full = 0
-        self.pkt_lost_iteration = 0  # pacchetti persi dovuti al numero di tentativi di ritrasmissione
-        self.pkt_lost_json = 0  # pacchetti vecchi non ancora inviati
-        self.pkt_lost_jpg = 0  # pacchetti jpg persi dovuti al nuovo pkt
+        self.pkt_lost_iteration = 0
+        self.pkt_lost_json = 0
+        self.pkt_lost_jpg = 0
         self.pkt_id = 0
         self.pkt_lost_P1 = 0
         self.pkt_cnt_jpg = 0
         self.start_tx_jpg = 0
         self.total_latency_pkt = 0
-
-
+        self.im_tx_to_RELAY = None  #variable used in the communication
+        self.im_tx_to_GS = None #variable used in the communication
 
     # update effective velocity (mod_v_real) of the drone according to the wind
     def velocity_real(self, wind_mod, gamma):
@@ -112,7 +111,7 @@ class Drone:
         else: # if wind speed is null
             self.mod_v_real=self.mod_v_app
 
-    #########################################################################################
+
 
     def power_consumption(self, sample_T, T_amb):
         # Costant UAV speed. The power is invariant to the wind but change with temperature

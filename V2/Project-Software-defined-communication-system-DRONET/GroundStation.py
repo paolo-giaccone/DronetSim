@@ -17,7 +17,8 @@ class GroundStation:
         # dimensions for the ground station controller
         self.SF_w = 500
         self.SF_h = 154
-#######################################################
+
+        # parameters used for the printing on the GUI
         self.flag_missing = 0
         self.drone_found_miss_id = -1
 
@@ -29,7 +30,8 @@ class GroundStation:
         self.queue_owner = None
         self.queue_owner_ID = 0
         self.pkt_owner = 0
-########################################################à
+
+        #counts the pkts received (used for the percentage)
         self.pkts_UAV = np.zeros((2, totUAV + 1))
 
     def receive(self):

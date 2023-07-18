@@ -54,7 +54,7 @@ MIN_DISTANCE_WAYPOINTS = 100  # [m], minimum distance between the UAV and the ne
 UAV_VISIBLE_RANGE = 100  # [m], maximum range of visibility of the missing person
 
 ## UAV COMMUNICATION PARAMETERS ##
-MAX_LENGTH_QUEUE_UAV = 3  # maximum number of packets to full the queue
+MAX_LENGTH_QUEUE_UAV = 220  # maximum number of packets to full the queue
 SIZE_PKT = 300 * 8  # [bit], packet size
 SIZE_JSON = 160 * 8  # [bit], packet size for jason type
 DELTA_t_MSG_TO_SENT = 4 # [s], every delta msg send a telemetry file
@@ -240,7 +240,6 @@ class Simulation():
                      'position_y [m]', 'UAV speed [m/s]', 'battery level [%]',
                      'waypoint distance [m]', 'distance from GS [m]', 'bitrate [Mbps]'])
 
-###################################################
         # communication
         self.state_channel = 'idle'
         self.counter_iteration_per_each_UAV = np.zeros((self.N_UAV, 1))
@@ -260,8 +259,6 @@ class Simulation():
         # solo per 'stressare' il simulatore
         self.cnt_delta_msg = 1
         self.delta_msg_varying = DELTA_t_MSG_TO_SENT
-
-##########################################################
 
     def UAV_Inizialization(self):
         # additional power consumption of the battery
@@ -780,6 +777,7 @@ class Simulation():
                     # schedule the new tx event
                     self.FES.add_events(self.sim_time + DELTA_t_MSG_TO_SENT, "Send Telemetry Data", self.UAVs[index].id)
 
+
             case 'Transmission attempt':
                 self.during_communication_update_position()
                 (UAV_sender_id, type_pkt, size_pkt, priority_of_pkt) = identification
@@ -1047,6 +1045,7 @@ class Simulation():
                     self.UAVs = list(filter(lambda x: x.id != drone.id, self.UAVs))
                     # remove events
                     self.FES.remove_events(drone.id, 'all')
+
                 # error management
                 else:
                     print("Invalid drone ID: ", drone.id)
@@ -1142,6 +1141,7 @@ class Simulation():
                 self.UAVs = list(filter(lambda x: x.id != drone.id, self.UAVs))
                 # remove events
                 self.FES.remove_events(self.FES, 'all')
+
             # error management
             else:
                 print("Invalid drone ID: ", drone.id)
