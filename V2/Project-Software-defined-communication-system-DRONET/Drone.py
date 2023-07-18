@@ -5,57 +5,70 @@ import queue
 
 class Drone:
     def __init__(self, id, gs, T_lim, T_in, V_in, I_in, E, add_cons, Ej, mod_v_real, max_length_queue, N_missings):
+        # waypoint coordinates
         self.x_new = 0
         self.y_new = 0
+        # ground station
         self.gs = gs
-        self.x = self.gs.x  # starting position same as the gs
+        # UAV position: starting position same as the gs
+        self.x = self.gs.x
         self.y = self.gs.y
+        # number of iteration necessary to reach the waypoint
         self.tot_iterazioni = 0
-        self.mod_v_app = 13  # meters per second
-        self.mod_v_real = mod_v_real
-        self.ang_v_app = 0
+        # UAV velocity
+        self.mod_v_app = 13  # [m/s], constant velocity
+        self.mod_v_real = mod_v_real # [m/s], resulting velocity
+        # angle between the new direction and the horizontal
         self.teta = 0
+        # remaining distance to reach the waypoint
         self.distance = 0
+        # max available bitrate
         self.bitRate_max = 1e5 # bps
-        self.bitrate = self.bitRate_max  # initial
-        self.bitrate_Relay_UAV = self.bitRate_max  # initial
+        # actual bitrate
+        self.bitrate = self.bitRate_max
+        # series of waypoints generated
         self.End_points = []
+        # needed for ardupilot
         self.velocity = []
+        # bitrate coefficient for attenuation
         self.coeff = 1
-        self.found_missing_flag = np.zeros((N_missings, 1)) #whene the drone has discovered the missing then it sends just once the coordinates to the BS
+        # flag for the missing person
+        self.found_missing_flag = np.zeros((N_missings, 1))
+        # number of missing people found
         self.how_many_missing_are_found = np.zeros((N_missings, 1))
-        self.time_past = 0
 
-        self.im_tx_to_GS = False
-        self.im_tx_to_RELAY = False
-        self.T_lim = T_lim
-        self.T_in = T_in  # initial temperature
-        self.V_in = V_in  # [V]
-        self.I_in = I_in  # [A]
-        self.P = V_in * I_in #[W]
-        self.E = E  # [Wh] initial energy
-        self.Time_aut = self.P / self.E * 60  # tempo di autonomia del drone [min]
+        ## UAV parameters
+        self.T_lim = T_lim # [°C],limit temperature
+        self.T_in = T_in  # [°C],initial temperature
+        self.V_in = V_in  # [V], nominal voltage
+        self.I_in = I_in  # [A], nominal current
+        self.P = V_in * I_in # [W], power
+        self.E = E # [Wh] initial energy
+        self.Time_aut = self.P / self.E * 60  # fly time [min]
         self.add_cons = add_cons  # additional power consumption of the battery
         self.Ej = Ej  # initial battery energy in joule [J]
-        self.Ej_check = Ej
-        self.deltaT = 0
+        self.Ej_check = Ej # it must be positive, otherwise the simulation ends
 
-        self.id = id
-        # at Starting point there is no power consumption
+        self.id = id #drone ID
+        # at Starting point there is no power consumption: we set them to 0
         self.act_cons = 0
         self.distance_GS = 0
-        self.FLAG_PC = True
+        self.FLAG_PC = True # used as flag for available battery when changing between different temperature ranges (power consumption)
+
+        # initial bitrate color circle
         GREEN = (0, 255, 0, 200)
         self.circle_color = GREEN
 
         # Available energy
-        self.check_f = 0
+        self.check_f = 0 # flag for Ej_check. When there is energy available it is set to 0
 
+        # tangent angles
         self.alpha1 = 0
         self.alpha2 = 0
         self.alpha_drone = 0
         self.FLAG_Interrupt = True # the drone has battery level different from 0
 
+######################################################################### DA VEDERE
         #communication
         self.queue = None
         self.size_jpg = 0
@@ -70,6 +83,7 @@ class Drone:
         self.pkt_cnt_jpg = 0
         self.start_tx_jpg = 0
         self.total_latency_pkt = 0
+
 
 
     # update effective velocity (mod_v_real) of the drone according to the wind
@@ -98,53 +112,47 @@ class Drone:
         else: # if wind speed is null
             self.mod_v_real=self.mod_v_app
 
+    #########################################################################################
+
     def power_consumption(self, sample_T, T_amb):
-
         # Costant UAV speed. The power is invariant to the wind but change with temperature
-        # somma vettoriale per componenti, poi rapporto tra i moduli delle velocità per trovare il valore del coefficiente beta
-        # gamma=angolo tra vento e orizzontale [0-360°]
-        #v_ratio = self.mod_v_app / self.mod_v_real
 
-        #if v_ratio >= 1:
-         #   beta = v_ratio
+        # initial values
+        eta = 1  # coeff for power consumption
+        alpha = 1  # coeff for available battery
 
-        #elif v_ratio < 1:
-          #  beta = 0.5 * v_ratio + 0.5
-        eta=1
-        alpha=1
-        beta=1
+        # Temperature range [20-40]°C
+        if T_amb in range(self.T_lim, 2 * self.T_lim + 1):
+            # best case for power consumption
+            alpha = 1
+            eta = 1
 
-        if T_amb in range(self.T_lim, 2*self.T_lim+1):  # +1 not included
-            alpha = 1  # battery
-            eta = 1 # moving
-            self.deltaT = 1
-        elif T_amb in range(0, self.T_lim) or T_amb > 2*self.T_lim:
+        # Temperature range [0-20]°C or > 40°C
+        elif T_amb in range(0, self.T_lim) or T_amb > 2 * self.T_lim:
 
-            if self.FLAG_PC:
-                # battery efficiency decrease by increasing the difference between the ideal temperature and the T_amb
+            if self.FLAG_PC:  # set available battery when changing the range for the first time. Then it is set to False (not updated)
+                # battery efficiency decreases by increasing the difference between the ideal temperature and the T_amb
                 alpha = 1 - 1 / 3 * (abs(self.T_lim - T_amb) / self.T_lim)
                 self.FLAG_PC = False
             else:
                 alpha = 1
 
-            # if the temperature is under 20° the power consumption is bigger
+            # if the temperature is under 20°C the power consumption is bigger
             eta = 1 + abs(self.T_lim - T_amb) * self.add_cons
 
+        # Temperature range T < 0°C
         elif T_amb < 0:
-            if self.FLAG_PC:
+            if self.FLAG_PC:  # set available battery when changing the range for the first time. Then it is set to False (not updated)
                 # it is assumed that under 0°C the battery temperature remain constant
                 alpha = 2 / 3
                 self.FLAG_PC = False
             else:
                 alpha = 1
 
-            self.deltaT = 3
-
             eta = 1 + abs(self.T_lim - T_amb) * self.add_cons
 
-
-        self.act_cons = eta * self.P * sample_T * beta  # actual consumption
-
+        # actual power consumption
+        self.act_cons = eta * self.P * sample_T
 
         if not self.check_f:
             # updating of the battery energy every sample time
@@ -153,16 +161,14 @@ class Drone:
             # check if it is not negative
             self.Ej_check = alpha * self.Ej - self.act_cons
 
-        self.Previous_T_amb = T_amb
-
-     #   print("Actual consumption at time", sample_T, ":", self.act_cons/3600, "[Wh]")
-     #   print("Actual energy available at time", sample_T, ":", self.Ej/3600, "[Wh]")
 
     def checkAvailabilityBattery(self, temperature, delta_T, Simulation):
 
+        # percentage battery level
         battery_level = self.Ej * 100 / Simulation.Initial_Ej
 
-        deltaTemp_max = -1  # worst case, battery decreases quicker if the temperature decreases (max possible decraese in temperature)
+        # worst case, battery decreases quicker if the temperature decreases (max possible decraese in temperature)
+        deltaTemp_max = -1
         Temp_updated = temperature + deltaTemp_max
 
         # battery level below 20%
@@ -171,30 +177,32 @@ class Drone:
             self.power_consumption(delta_T, Temp_updated)
             battery_level_prov = self.Ej_check * 100 / Simulation.Initial_Ej
             if battery_level_prov < 0:
-                self.FLAG_Interrupt = False  # return False to indicate loop should break
+                # False to indicate loop should break
+                self.FLAG_Interrupt = False
             else:
                 # at the next Update UAV location event decrease the remaining battery level
                 self.Ej_check = self.Ej
                 self.check_f = 0
                 self.FLAG_Interrupt = True
 
-    # generate the next waypoint
-    def trajectory_UAV(self, x_shift, y_shift, n_rows, n_cols, Waypoint, ARDUPILOT):
+
+    def trajectory_UAV(self, x_shift, y_shift, n_cols, Waypoint, ARDUPILOT): # generation of next waypoint
+        # standard settings: no Ardupilot
         if not ARDUPILOT:
-            # set the specific subarea
+            # set the specific subarea: division according to the number of UAV
             if self.id % n_cols == 0:
-                i_x = n_cols
-                i_y = self.id/n_cols
+                i_x = n_cols # column
+                i_y = self.id/n_cols # row
 
             elif self.id % n_cols != 0:
-                i_x = self.id%n_cols
-                i_y = np.ceil(self.id/n_cols)
+                i_x = self.id%n_cols # column
+                i_y = np.ceil(self.id/n_cols) # row
 
-            # relative position in the sub area
+            # relative position in the sub area: random choice
             self.x_new = random.uniform(0, 2*x_shift)
             self.y_new = random.uniform(0, 2*y_shift)
 
-            # absolute position
+            # absolute position: considering the whole map
             self.x_new += 2*x_shift*(i_x-1)
             self.y_new += 2*y_shift*(i_y-1)
 
@@ -221,6 +229,7 @@ class Drone:
         self.x_new = 2*x_shift*(i_x-1) + x_shift
         self.y_new = 2*y_shift*(i_y-1) + y_shift
 
+        # distance from the next waypoint
         delta_x_new = (self.x_new - self.x)
         delta_y_new = (self.y_new - self.y)
         self.distance = math.sqrt(delta_x_new ** 2 + delta_y_new ** 2)
@@ -231,15 +240,18 @@ class Drone:
         # save all the waypoint generated for each UAV
         self.End_points.append((self.x_new, self.y_new))
 
-    # compute the needed iteration to reach the waypoint
+
     def cnt_iteration(self, time_slot):
+        # distance from the next waypoint
         distance = math.sqrt((self.x_new - self.x) ** 2 + (self.y_new - self.y) ** 2)
+        # time needed to reach the waypoint
         time_to_reach = distance / self.mod_v_real
 
+        # compute the needed iteration to reach the waypoint
         if time_slot > 0:
             self.tot_iterazioni = np.round(time_to_reach / time_slot)
 
-    #
+
     def move(self, time_slot):
         # simulated time
         delta_t = time_slot
@@ -258,49 +270,59 @@ class Drone:
 
         # update bitrate based on distance from gs
         self.distance_GS = math.sqrt((coord_x - self.gs.x) ** 2 + (coord_y - self.gs.y) ** 2)
-        # print('UAV-GS: distance: ', self.distance_GS, 'coord: (', coord_x, ', ', coord_y, ')')
 
+        # slope for linear decreasing region of Bitrate
         m = -self.bitRate_max / (2.5e3 - 2e3)
 
+        # max bitrate region
         if self.distance_GS < 2e3:
             self.bitrate = self.bitRate_max
 
+        # linear decreasing bitrate region
         elif 2e3 <= self.distance_GS < 2.5e3:
-            self.bitrate = m * (self.distance_GS - 2e3) + self.bitRate_max  # con equazione della retta
+            self.bitrate = m * (self.distance_GS - 2e3) + self.bitRate_max
 
+        # null bitrate region
         else:
             self.bitrate = 0
 
     def obstacle_fun(self, x_c, y_c, r, type_object, distance_obstacle_GS, scale_factor):
-
+        # center and radius of the obstacle
         x_c *= scale_factor
         y_c *= scale_factor
         r *= scale_factor
 
+        # UAV position
         pos_x = self.x*scale_factor
         pos_y = self.y*scale_factor
 
+        # method used to find the tangent to the obstacle
         a = (x_c - pos_x) ** 2 - r ** 2
         b = 2 * (x_c * pos_y - pos_x * pos_y - x_c * y_c + pos_x * y_c)
         c = (y_c - pos_y) ** 2 - r ** 2
 
         Delta = b ** 2 - 4 * a * c
+        # obstacle between the UAV and GS
         if Delta < 0:
+            # mountain: on top of the mountain the communication is still available
             if type_object == 1:
                 self.coeff = 1
+            # cloud: it halves the bitrate
             elif type_object == 2:
                 self.coeff = 0.5
 
-            #self.bitrate *= self.coeff
             return self.coeff
 
+        # "a" must be different from zero
         if a != 0:
-            m1 = (-b + math.sqrt(b ** 2 - 4 * a * c)) / (2 * a)  # slope
-            m2 = (-b - math.sqrt(b ** 2 - 4 * a * c)) / (2 * a)  # slope
+            # tangent slopes
+            m1 = (-b + math.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
+            m2 = (-b - math.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
         elif a == 0:
             m1 = math.pi/2
             m2 = math.pi/2
 
+        # checking the quadrants: the second conditions for each quadrant is related to the passage from one quadrant to another one
         if(pos_x < x_c - r) and (pos_y < y_c): # 1°
              self.alpha1 = math.atan(m1)
              self.alpha2 = math.atan(m2)
@@ -326,44 +348,56 @@ class Drone:
             self.alpha1 = math.atan(m1)
             self.alpha2 = math.atan(m2) + math.pi
 
-        # in degrees
+        # angles in degrees
         alpha1 = self.alpha1 * 180 / math.pi
         alpha2 = self.alpha2 * 180 / math.pi
 
+        # angles in range [0-360]°
         if alpha1 < 0:
             alpha1 += 360
         if alpha2 < 0:
             alpha2 += 360
 
         # communication impact
-        self.alpha_drone = math.atan2(pos_y - self.gs.y, pos_x - self.gs.x) * 180 / math.pi  # angolo tra drone e groundstation
+        self.alpha_drone = math.atan2(pos_y - self.gs.y, pos_x - self.gs.x) * 180 / math.pi
         self.alpha_drone = self.alpha_drone + 180
+
+        # if the obstacle is between the UAV and the GS
         if (min(alpha1, alpha2) <= self.alpha_drone <= max(alpha1, alpha2)) and (self.distance_GS > distance_obstacle_GS):
+            # mountain obstacle
             if type_object == 1:
-                self.coeff = 0  # se coeff è uguale a 0 non c'è comunicazione
+                # no communication available
+                self.coeff = 0
+            # cloud obstacle
             elif type_object == 2:
-                self.coeff = 0.5  # se coeff è uguale a 0.5 la comunicazione viene dimezzata
+                # it halves the bitrate
+                self.coeff = 0.5
+        # no obstacles
         else:
             self.coeff = 1
 
-        #self.bitrate *= self.coeff
         return self.coeff
-    def circle_color_fun(self):
 
+    def circle_color_fun(self):
+        # setting the colors for the circle on UAVs, representing the bitrate status
         GREEN = (0, 255, 0, 200)
         ORANGE = (255, 128, 0, 200)
         RED = (255, 0, 0, 200)
 
+        # max bitrate: green
         if self.bitrate == self.bitRate_max:
             self.circle_color = GREEN
 
+        # 0 < bitrate < max bitrate: orange
         elif 0 < self.bitrate < self.bitRate_max:
                 self.circle_color = ORANGE
 
+        # bitrate = 0: red
         else:
                 self.circle_color = RED
 
     def print_EndPoints(self, gs):
+        # to print all the waypoints
         i = 0
         print('Starting Position  x: %.2f, y: %.2f'%(gs.x, gs.y))
         for x, y in self.End_points:

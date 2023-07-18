@@ -862,7 +862,7 @@ class Simulation():
                 else:
                     drone.FLAG_Interrupt = False
                     pos = [0, 0]
-                drone.trajectory_UAV(self.x_shift, self.y_shift, self.n_rows, self.n_cols, pos, ARDUPILOT)
+                drone.trajectory_UAV(self.x_shift, self.y_shift, self.n_cols, pos, ARDUPILOT)
 
                 # compute the needed iterations to reach the generated waypoint
                 drone.cnt_iteration(self.time_slot)

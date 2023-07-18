@@ -4,18 +4,20 @@ import math
 class Parameter_Initialization():
     def __init__(self, max_wind):
         # Parameter Initialization #
-        # settings: the simulation starts when there are correct parameters set
         self.ardupilot_flag = False
+        # False: random waypoints / True: ardupilot waypoints
         self.settings = False
-        self.max_wind = max_wind
+        # settings: the simulation starts when there are correct parameters set
+        self.max_wind = max_wind # to compare the inserted value
 
+        # generation of the parameters window
         self.window = tk.Tk()
         self.window.geometry("900x820")
         self.window.resizable(False, False)
         self.window.configure(background="white")
         self.window.title("Parameter Initialization")
 
-        # Separation row
+        # Header Environmental Parameters
         self.Separation_EE = tk.Label(self.window, text="Environmental Parameters",
                                    pady=5, padx=5, font=("Helvetica", 20))
         self.Separation_EE.grid(row=0, columnspan=4, sticky="WE", padx=10, pady=10)
@@ -77,12 +79,12 @@ class Parameter_Initialization():
         self.text_input_6 = tk.Entry()
         self.text_input_6.grid(row=3, column=3, sticky="WE", pady=10, padx=10)
 
-        # Separation row
+        ## SIMULATION PARAMETERS
+        # Header Simulation Parameters
         self.Separation = tk.Label(self.window, text="Simulation Parameters",
                                         pady=5, padx=5, font=("Helvetica", 20))
         self.Separation.grid(row=4, columnspan=4, sticky="WE",  padx=10, pady=10)
 
-        ## Other parameters
         # definition of number of UAVs
         self.welcome_label_7 = tk.Label(self.window, text="Number of UAVs:",
                                    pady=5, padx=5, font=("Helvetica", 15))
@@ -107,7 +109,7 @@ class Parameter_Initialization():
         self.text_input_9 = tk.Entry()
         self.text_input_9.grid(row=7, column=1, sticky="WE", pady=10, padx=10)
 
-        ## Communication Parameters
+        ## COMMUNICATION PARAMETERS
         # definition of the Length of the Queue
         self.welcome_label_10 = tk.Label(self.window, text="Length of the Queue:",
                                         pady=5, padx=5, font=("Helvetica", 15))
@@ -124,7 +126,7 @@ class Parameter_Initialization():
         self.text_input_11 = tk.Entry()
         self.text_input_11.grid(row=6, column=3, sticky="WE", pady=10, padx=10)
 
-        # N° Retrx Attempts, Low Priority
+        # N° Retrx Attempts, high Priority
         self.welcome_label_12 = tk.Label(self.window, text="N° Retrx Attempts, High Priority:",
                                          pady=5, padx=5, font=("Helvetica", 15))
         self.welcome_label_12.grid(row=7, column=2, sticky="WE", padx=10, pady=10)
@@ -145,8 +147,10 @@ class Parameter_Initialization():
 
         self.window.mainloop()
 
+    ## INITIALIZE BUTTON
 
     def initialize(self):
+        # in order to see if all the parameters have been set up correctly
         if (self.text_input.get() and self.text_input_2.get() and self.text_input_3.get() and self.text_input_4.get() and self.text_input_5.get() and
             self.text_input_6.get() and self.text_input_7.get() and self.text_input_8.get() and self.text_input_9.get() and self.text_input_10.get() and self.text_input_11.get() and self.text_input_12.get()):
             if not -20 <= int(self.text_input.get()) <= 40:
@@ -187,6 +191,7 @@ class Parameter_Initialization():
             elif not int(self.text_input_12.get()) >= 0:
                 text_response = ("N° Retr Attempt, High Priority: Negative value not allowed! \nActual given value: %d" % int(
                     self.text_input_12.get()))
+            # if all the parameters have been correctly set up
             else:
                 text_response = ("T_in 1 = %s°C \nWind 1 = %s m/s \nWind Angle 1 = %s° \nT_in 2 = %s°C \nWind 2 = %s m/s \nWind Angle 2 = %s° \nNumber of UAVs = %s \nNumber of missing people = %s \nNumber of clouds = %s \nQueue Length = %s \nN° Retr Attempt, Low Priority = %s \nN° Retr Attempt, High Priority = %s \nArdupilot = %s"  % (
                     self.text_input.get(), self.text_input_2.get(), self.text_input_3.get(),self.text_input_4.get(),
@@ -209,13 +214,14 @@ class Parameter_Initialization():
 
                 self.ardupilot = self.Ardupilot
 
-        else:
+        else: # if some parameters have not been set up
             text_response = "Initialize parameters!"
 
         textwidget = tk.Text()
         textwidget.insert(tk.END, text_response)
         textwidget.grid(row=11, columnspan=4, sticky="WE", padx=10)
 
+    # START BUTTON
     def start_simulation(self):
         if self.settings:
             self.window.quit() #close the window and start the simulation
@@ -225,6 +231,7 @@ class Parameter_Initialization():
             textwidget2.insert(tk.END, text_response2)
             textwidget2.grid(row=11, columnspan=2, sticky="WE", padx=10)
 
+    # ARDUPILOT BUTTON
     def Ardupilot(self):
         if self.ardupilot_flag == False:
             text_response3 = "Ardupilot = True"
