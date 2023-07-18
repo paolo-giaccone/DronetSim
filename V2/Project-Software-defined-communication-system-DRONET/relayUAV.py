@@ -15,21 +15,27 @@ class Relay:
         self.SF = SCALE_FACTOR
         self.drone = Drone(self.id, gs, T_lim, T_in, V_in, I_in, E, add_cons, Ej, mod_v_real, max_length_queue, N_miss)
         self.bitRate_max = self.drone.bitRate_max
+
         self.bitrate = self.bitRate_max
         self.pkt_lost_tot = 0
         self.pkt_lost_queue_full = 0
-        self.pkt_lost_iteration = 0  # pacchetti persi dovuti al numero di tentativi di ritrasmissione
-        self.pkt_lost_json = 0  # pacchetti vecchi non ancora inviati
-        self.pkt_lost_jpg = 0  # pacchetti jpg persi dovuti al nuovo pkt
-        self.pkt_cnt_jpg = 0 #needed for counting the number of received pkts of an image
-        self.pkt_lost_P1 = 0 #pkt P1 lost due to their congested queue
-        self.total_latency_jpg = 0 #needed for the comupation of the image latency
-        self.start_tx_jpg = 0 #latency compuatation starting time
+        # lost packets due to number of retransmission attempts
+        self.pkt_lost_iteration = 0
+        # old packages not yet sent
+        self.pkt_lost_json = 0
+        # jpg packets lost due to the new pkt
+        self.pkt_lost_jpg = 0
+        # needed for counting the number of received pkts of an image
+        self.pkt_cnt_jpg = 0
+        # pkt P1 lost due to their congested queue
+        self.pkt_lost_P1 = 0
+        # needed for the computation of the image latency
+        self.total_latency_jpg = 0
+        # latency computation starting time
+        self.start_tx_jpg = 0
         self.queue = queue.PriorityQueue(maxsize = max_length_queue)
         self.flag_start_TX = False
         self.channel_relay = 'idle'
-
-        self.radious_relay = 290
 
         #bitrate between relay and UAV with null bitrate
         self.bitrate_UAV_rel = self.drone.bitRate_max
@@ -41,17 +47,19 @@ class Relay:
 
         delta_x_new = (self.drone.x_new - self.drone.x)
         delta_y_new = (self.drone.y_new - self.drone.y)
+
         # angle towards the mountain
-        self.drone.teta = math.atan2(delta_y_new, delta_x_new)  # angolo tra il nuovo segmento e l'orizzontale
+        self.drone.teta = math.atan2(delta_y_new, delta_x_new)
 
         self.drone.velocity_real(wind_speed, wind_angle)
 
     def reach_top_mountain(self, time_interval):
 
         self.drone.cnt_iteration(time_interval)
-        if self.drone.tot_iterazioni > 0:
 
-            if time_interval > 0: # could happen that the time interval is equal to 0
+        if self.drone.tot_iterazioni > 0:
+            # could happen that the time interval is equal to 0
+            if time_interval > 0:
                 # move the drone #
                 self.drone.move(time_interval)
                 # compute the needed iterations to reach the generated waypoint
@@ -60,24 +68,28 @@ class Relay:
             # update the number of iteration #
             self.drone.tot_iterazioni -= 1
 
+        # distance between the relay and the top of the mountain
         dist_RELAY_MOUNT = ((self.drone.x - self.drone.x_new) ** 2 + (self.drone.y - self.drone.y_new) ** 2) ** 0.5
         self.distance_GS = dist_RELAY_MOUNT
 
+    #set the starting transmission when the relè is close to the end point
         if dist_RELAY_MOUNT < 9 and not self.FLAG_ARRIVED:
             self.FLAG_ARRIVED = True
             for j in range(1, self.N_UAV + 1):
                 # self.FES.put((self.DELTA_t_MSG_TO_SENT + (rnd_initial_time[j - 1]), "Send Telemetry Data", j))
                 self.FES.add_events(self.DELTA_t_MSG_TO_SENT, "Send Telemetry Data", j)
 
+
     def bitrate_relay_UAV(self, coord_UAV_x, coord_UAV_y, Mountain_pos):
 
+        # coordinates of UAV transmitting to relay
         coord_UAV_x = coord_UAV_x * self.SF
         coord_UAV_y = coord_UAV_y * self.SF
 
         # update bitrate based on distance from gs
         self.distance_relay_UAV = math.sqrt((coord_UAV_x - Mountain_pos[0]) ** 2 + (coord_UAV_y - Mountain_pos[1]) ** 2)
-        # print('UAV-GS: distance: ', self.distance_GS, 'coord: (', coord_x, ', ', coord_y, ')')
 
+        # slope
         m = -self.bitRate_max / (2.5e3 - 2e3)
 
         if self.distance_relay_UAV < 2e3:

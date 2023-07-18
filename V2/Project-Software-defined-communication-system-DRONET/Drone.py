@@ -68,6 +68,8 @@ class Drone:
         self.pkt_cnt_jpg = 0
         self.start_tx_jpg = 0
         self.total_latency_pkt = 0
+        self.im_tx_to_RELAY = None  #variable used in the communication
+        self.im_tx_to_GS = None #variable used in the communication
 
 
     # update effective velocity (mod_v_real) of the drone according to the wind

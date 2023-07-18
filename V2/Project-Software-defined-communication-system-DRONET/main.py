@@ -224,10 +224,7 @@ class Simulation():
         self.T_sample = 3  # 2 * self.time_slot  # [s] deve essere maggiore della granularity. Perchè?
         self.count_Sample_Time = 1
         self.FES.FES_Initialization(self.sim_time)
-        self.tot_pkt_lost = 0
-        self.pkt_lost_interval_time = 0
-        # data pkt csv
-        self.delta_time_for_throughput = 0
+
 
         # loop FLAG
 
@@ -913,9 +910,7 @@ class Simulation():
         # move each cloud
         for cloud_each in self.clouds:
             (T, w, wind_angle, flag_pos) = self.check_position(cloud_each.cloud_x)
-            cloud_each.cloud_motion(time_interval, self.GS_coord[0], self.GS_coord[1], SCALE_FACTOR, w, wind_angle,
-                                    self.cloud_radius,
-                                    self.cloud_type)
+            cloud_each.cloud_motion(time_interval, self.GS_coord[0], self.GS_coord[1], SCALE_FACTOR, w, wind_angle)
         # evaluate the current Bit_Rate in function of the distance #
         self.relay.drone.bitrate_fun(SCALE_FACTOR)
         # obstacles effect on the bit rate #
