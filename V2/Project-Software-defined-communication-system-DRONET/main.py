@@ -261,7 +261,6 @@ class Simulation():
         self.cnt_delta_msg = 1
         self.delta_msg_varying = DELTA_t_MSG_TO_SENT
 
-        self.FLAG_exit_from_pygame = 0
 
     def UAV_Inizialization(self):
         add_cons = 0.02  # additional power consumption of the battery
@@ -511,7 +510,7 @@ class Simulation():
                     self.running = False
 
             # FES Event Loop
-            while (not self.FES.FES.empty()) and len(self.UAVs) > 0 and self.FLAG_exit_from_pygame == 0:
+            while (not self.FES.FES.empty()) and len(self.UAVs) > 0:
                 self.EventLoop()
                 # Update Frame
                 screen.blit(background, [0, self.HEIGHT_controller])
@@ -643,7 +642,7 @@ class Simulation():
                 self.text_controller(screen)
 
                 # flip the display to put your work on screen #
-              #  pygame.display.flip()
+                pygame.display.flip()
 
                 # updating image rate #
                 clock.tick(FPS)
@@ -745,21 +744,11 @@ class Simulation():
                 self.during_communication_update_position()
                 index = self.search_UAVs_index(identification)
                 if index < len(self.UAVs):
-                    if self.relay.FLAG_ARRIVED:
-                        print('\n SimTime: ', self.sim_time, '\n Event: ', self.event_type, '\n Drone: ',
-                              self.UAVs[index].id,
-                              '\n Size Queue: ', self.UAVs[index].queue.qsize(), '\n Bitrate: ', self.UAVs[index].bitrate,
-                              '\n')
-
-                        self.Communication.sending_telemetry_data(self.UAVs[index], self.relay, self.sim_time,
+                    self.Communication.sending_telemetry_data(self.UAVs[index], self.relay, self.sim_time,
                                                                   self.delta_msg_varying)
                         # schedule the new tx event
-                        self.FES.add_events(self.sim_time + DELTA_t_MSG_TO_SENT, "Send Telemetry Data", self.UAVs[index].id)
-                        # if self.sim_time > self.cnt_delta_msg * 60 and self.sim_time > 150:
-                        #   self.cnt_delta_msg += 1
-                        #  self.delta_msg_varying = self.delta_msg_varying / 2
-                    # self.FES.add_events(self.sim_time + self.delta_msg_varying, "Send Telemetry Data",
-                    #                    self.UAVs[index].id)
+                    self.FES.add_events(self.sim_time + DELTA_t_MSG_TO_SENT, "Send Telemetry Data", self.UAVs[index].id)
+
 
             case 'Transmission attempt':
                 self.during_communication_update_position()
@@ -1027,7 +1016,6 @@ class Simulation():
 
                     self.UAVs = list(filter(lambda x: x.id != drone.id, self.UAVs))
                     self.FES.remove_events(drone.id, 'all')
-                    self.FLAG_exit_from_pygame = 1
                 else:
                     print("Invalid drone ID: ", drone.id)
 
@@ -1128,7 +1116,7 @@ class Simulation():
                     self.Ej_UAV = drone.Ej
                 self.UAVs = list(filter(lambda x: x.id != drone.id, self.UAVs))
                 self.FES.remove_events(self.FES, 'all')
-                self.FLAG_exit_from_pygame = 1
+
             else:
                 print("Invalid drone ID: ", drone.id)
 
@@ -1450,10 +1438,6 @@ class Simulation():
         Y = self.HEIGHT_controller - 35
         screen.blit(text_surface, (X, Y))
 
-        if N_missing > 0:
-            text_surface = font.render(
-                'MISSING PERSON --> (%.2f, %.2f)m' % (self.coord_disperso[0][0], self.coord_disperso[0][1]), True, red)
-            screen.blit(text_surface, (X2, 35))
 
     def rotatePolygon(self, polygon, theta, WP_x, WP_w, WP_y, WP_h):
         """Rotates the given polygon which consists of corners represented as (x,y), around the ORIGIN, clock-wise, theta degrees"""

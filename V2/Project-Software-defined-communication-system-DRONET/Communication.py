@@ -404,7 +404,7 @@ class Communication:
             total_pkt, pkt_id, gen_time, sim_time, None, UAV_tx.total_latency_pkt, delta_msg_varying)
 
         self.data_analizer.write_data_rx_pkt(tuple_test)
-        #insert the received pkt in the queue of the GS
+        #insert the received pkt in the queeu
         self.gs.buffer.put(
             (sim_time, gen_time, queue_owner, pkt_owner, priority_of_pkt, type_pkt, cnt_packet_sent, total_pkt))
         self.gs.receive()

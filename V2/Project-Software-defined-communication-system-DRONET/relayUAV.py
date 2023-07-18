@@ -72,13 +72,8 @@ class Relay:
         dist_RELAY_MOUNT = ((self.drone.x - self.drone.x_new) ** 2 + (self.drone.y - self.drone.y_new) ** 2) ** 0.5
         self.distance_GS = dist_RELAY_MOUNT
 
-    #set the starting transmission when the relè is close to the end point
         if dist_RELAY_MOUNT < 9 and not self.FLAG_ARRIVED:
             self.FLAG_ARRIVED = True
-            for j in range(1, self.N_UAV + 1):
-                # self.FES.put((self.DELTA_t_MSG_TO_SENT + (rnd_initial_time[j - 1]), "Send Telemetry Data", j))
-                self.FES.add_events(self.DELTA_t_MSG_TO_SENT, "Send Telemetry Data", j)
-
 
     def bitrate_relay_UAV(self, coord_UAV_x, coord_UAV_y, Mountain_pos):
 
