@@ -26,8 +26,6 @@ class Drone:
         self.how_many_missing_are_found = np.zeros((N_missings, 1))
         self.time_past = 0
 
-        self.im_tx_to_GS = False
-        self.im_tx_to_RELAY = False
         self.T_lim = T_lim
         self.T_in = T_in  # initial temperature
         self.V_in = V_in  # [V]

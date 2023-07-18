@@ -10,24 +10,25 @@ class Communication:
 
         self.N_UAVs = N_UAVs
 
+        #channel used for the communication toward the GS
         self.state_channel = 'idle'
-        self.time_channel_is_getting_busy = 0
-        self.time_channel_is_idle = 0
 
+        #counter that takes into account the tx attemptions of each single UAV
         self.cnt_iteration_per_each_UAV = np.zeros((self.N_UAVs + 1, 2))
+
         self.MAX_NUMB_OF_ATTEMPTIONS_TX_p0 = MAX_NUMB_OF_ATTEMPTIONS_TX_p0
         self.MAX_NUMB_OF_ATTEMPTIONS_TX_p1 = MAX_NUMB_OF_ATTEMPTIONS_TX_p1
 
-        self.tot_pkt_lost = 0
-        self.pkt_lost_interval_time = 0
         self.FES = FES
 
         self.gs = gs
 
         self.data_analizer = data_analizer
 
+        #flag that indicatates if the communication uses a double channel or a single one
         self.flag_double_channel = Flag_double_ch
 
+    #function used to check if there is enough space on the queue
     def check_queue_availability(self, n_pkts_to_insert, UAV_sender_queue):
         # actual length of UAV
         len_queue = UAV_sender_queue.qsize()
@@ -38,6 +39,8 @@ class Communication:
             flag_pkts_can_be_inserted = True
         return flag_pkts_can_be_inserted
 
+    #if a pkt has to be removed, then by calling this function, it register the state of removed pkt in the csv file
+    # (it calls the function 'self.data_analizer.write_data_rx_pkt(tuple_test)'
     def pkt_lost_register(self, UAV_sender, UAV_no_tx, cause_of_the_lost, tuple_test):
         if cause_of_the_lost == 'removed - congestion':
             if UAV_no_tx is not None:
@@ -53,6 +56,8 @@ class Communication:
             UAV_sender.pkt_lost_iteration += 1
         self.data_analizer.write_data_rx_pkt(tuple_test)
 
+    #function used if the pkt has exhausted its transmission attempts -> this followinf function is called
+    #it basically creates the tuple that is passed to the pkt_lost_register function
     def remove_pkts_expired_tx(self, UAV_sender, UAV_no_tx, sim_time, delta_msg_varying):
         # experied attempts tx -> remove pkt
         (gen_time, queue_owner, pkt_owner, pkt_type, size_pkt,
@@ -64,21 +69,24 @@ class Communication:
 
         self.pkt_lost_register(UAV_sender, UAV_no_tx, state, tuple_test)
 
+    #check if the queue is empty or not
     def check_queue_empty(self, queue):
         if queue.empty():
             return True
         else:
             return False
 
+    #function that is used for the transmission of the synchrounous data
     def sending_telemetry_data(self, UAV, relay, sim_time, delta_msg_varying):
-        generation_pkt_time = sim_time
-        cnt_packet_sent = numb_pkt = 1
+        generation_pkt_time = sim_time #time at which the pkt is generated
+        cnt_packet_sent = numb_pkt = 1 #1 = only one pkt is sent (size of the json is smaller than a single pkt)
         priority_of_pkt = 0
-        pkt_owner = UAV.id
+        pkt_owner = UAV.id  #store the ID of the UAV that has to tx
         type_pkt = 'json'
-        pkt_id = UAV.pkt_id
+        pkt_id = UAV.pkt_id #store the ID of the pkt that has to tx
         size_pkt = self.size_json
 
+        #creates the pkt that contains the following parameters
         pkt_tuple = (generation_pkt_time, 'queue', pkt_owner, type_pkt, size_pkt,
                      priority_of_pkt, cnt_packet_sent, numb_pkt, pkt_id)
 
@@ -88,49 +96,42 @@ class Communication:
         #needed to check if there is enough space to insert the pkt
         flag_pkts_can_be_inserted = self.check_queue_availability(numb_pkt, UAV.queue)
 
-        if flag_pkts_can_be_inserted:
+        if flag_pkts_can_be_inserted: #then insert the pkt in the queue
             UAV.queue.put(pkt_tuple)
-            print('The pkt of ID %d is inserted in the queue of: %s whose id is: %d size queue: %d' % (
-                UAV.id, 'queue', UAV.id, UAV.queue.qsize()))
         else:
-            cause_of_the_lost = 'removed - congestion'
-            tuple_test = (
+            cause_of_the_lost = 'removed - congestion'  #congestion of the queue
+            tuple_test = (  #creates the tuple containg all the parameters that have to be reported con the csv file
                 sim_time, cause_of_the_lost, 'queue', pkt_owner, type_pkt, size_pkt, priority_of_pkt,
                 cnt_packet_sent, numb_pkt,
                 pkt_id, generation_pkt_time, None, None, None, delta_msg_varying)
-            self.pkt_lost_register( UAV, None, cause_of_the_lost, tuple_test)
-            print('The pkt of ID %d is NOT inserted in the queue of: %s whose id is: %d size queue: %d' % (
-                UAV.id, 'queue', UAV.id, UAV.queue.qsize()))
+            self.pkt_lost_register( UAV, None, cause_of_the_lost, tuple_test)   #registration of the pkt lost
 
-        UAV.pkt_id += 1
-        if flag_first_pkt_to_be_served:
-            if UAV.bitrate > 0:
+
+        UAV.pkt_id += 1 #indicates the ID of the new pkt that will be generated
+
+        if flag_first_pkt_to_be_served:#check if before of insert the data there were presents other pkts waitng for their transmission
+            if UAV.bitrate > 0: #send directly toward the GS
                 print('ID: ', UAV.id, 'bitrate: ', UAV.bitrate, 'try to send telemetry data by myself')
-                # check if the pkt freshly inserted is the first one in the pkt or there are others to be served
-                    #      print('sending telemetry data: sim_time: ', sim_time )
                 self.channel_communication(UAV, None, sim_time, delta_msg_varying)
             else:
-                print('ID: ', UAV.id, 'bitrate: ', UAV.bitrate, 'try to send telemetry data by relay')
-                print('the pkt of telemetry has to be sent toward the relay, size UAV queue: ', UAV.queue.qsize())
                 self.bitrate_null_send_to_relay(UAV, relay, sim_time, delta_msg_varying, type_pkt, size_pkt,
-                                                priority_of_pkt)
+                                                priority_of_pkt)    #the transmission has one hop, first tx toward the relè and in time will tx toward the GS
 
-    def sending_data_of_missings(self, UAV, relay, sim_time, delta_msg_varying):
+    def sending_data_of_missings(self, UAV, relay, sim_time, delta_msg_varying):    #sending the asynchronous pkts
         # size of the image has been chosen in function of the real images representing the mountains in 4K
-        size_image = random.randint(1.5e4 * 8, 2e4 * 8)
-        numb_pkt = np.ceil(size_image / self.size_pkt)
-        priority_of_pkt = 0
+        size_image = random.randint(1.5e4 * 8, 2e4 * 8) #size of the image
+        numb_pkt = np.ceil(size_image / self.size_pkt)  #computes the number of pkts containg the whole image
+        priority_of_pkt = 0 #image has priority 0
         pkt_owner = UAV.id
         type_pkt = 'jpg'
 
-        flag_first_pkt_to_be_served = self.check_queue_empty(UAV.queue)
-        flag_pkts_can_be_inserted2 = True  # initialize the variable
-        flag_pkts_can_be_inserted1 = self.check_queue_availability(numb_pkt + 1, UAV.queue)
-        if not flag_pkts_can_be_inserted1:
-            flag_pkts_can_be_inserted2 = self.check_queue_availability(1, UAV.queue)
-            print('Check availability flag pkts can be inserted json P1: ', flag_pkts_can_be_inserted2)
+        flag_first_pkt_to_be_served = self.check_queue_empty(UAV.queue) #check if the pkts that have to be inserted are the first ones to be tx
 
-        cnt = 1
+        flag_pkts_can_be_inserted1 = self.check_queue_availability(numb_pkt + 1, UAV.queue) #check if there is enough space in the queue for containg the whole image + json file
+
+        flag_pkts_can_be_inserted2 = self.check_queue_availability(1, UAV.queue)           #  flag_pkts_can_be_inserted2 = self.check_queue_availability(1, UAV.queue)
+
+        cnt = 1 #counter needed for the counting of the pkts for the image
         # insert or discard the image pkts
         while cnt <= numb_pkt:
             if size_image > self.size_pkt:
@@ -143,7 +144,7 @@ class Communication:
                             priority_of_pkt, cnt, numb_pkt, UAV.pkt_id)
                 UAV.queue.put(tuple_tx)
             else:
-                cause_of_the_lost = 'removed - congestion'
+                cause_of_the_lost = 'removed - congestion'  #else register the pkts lsot due to the congested queue
                 tuple_test = (
                     sim_time, cause_of_the_lost, 'queue', pkt_owner, type_pkt, size_pkt, priority_of_pkt,
                     cnt, numb_pkt,
@@ -152,14 +153,13 @@ class Communication:
                 self.pkt_lost_register(UAV, None, cause_of_the_lost, tuple_test)
             #    print('The pkt jpg of ID %d is NOT inserted in the queue of: %s whose id is: %d size queue: %d' % (
             #       UAV.id, queue_owner, UAV_sender.id, UAV_sender.queue.qsize()))
-            UAV.pkt_id += 1
+            UAV.pkt_id += 1 #set the new id for the incoming pkt
             # decrease the image size
             size_image -= self.size_pkt
             cnt += 1
 
-        if flag_pkts_can_be_inserted2:
+        if flag_pkts_can_be_inserted2 or flag_pkts_can_be_inserted1:  #if there space for at least the pkt of json, the insert it
             type_pkt = 'json'
-        if flag_pkts_can_be_inserted2 or flag_pkts_can_be_inserted1:  # space only for one pkt - json
             tuple_tx = (sim_time, 'queue', pkt_owner, 'json', self.size_json,
                         1, 1, 1, UAV.pkt_id)
             UAV.queue.put(tuple_tx)

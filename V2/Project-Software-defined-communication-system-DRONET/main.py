@@ -54,7 +54,7 @@ MIN_DISTANCE_WAYPOINTS = 100  # [m], minimum distance between the UAV and the ne
 UAV_VISIBLE_RANGE = 100  # [m], maximum range of visibility of the missing person
 
 ## UAV COMMUNICATION PARAMETERS ##
-MAX_LENGTH_QUEUE_UAV = 560  # maximum number of packets to full the queue
+MAX_LENGTH_QUEUE_UAV = 220  # maximum number of packets to full the queue
 SIZE_PKT = 300 * 8  # [bit], packet size
 SIZE_JSON = 160 * 8  # [bit], packet size for jason type
 DELTA_t_MSG_TO_SENT = 4  # [s], every delta msg send a telemetry file
