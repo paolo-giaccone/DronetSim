@@ -79,20 +79,6 @@ class data_analizer:
             pkt_id, time_generated, received_time, interval_time_ch_idle, latency_pkts, delta_msg_varying) = identification
         total_load = None
 
-        latency_tot = None
-        total_load_pkt = None
-
-        lost_pkt_congested_bps = None
-        lost_pkt_expired_bps = None
-        lost_pkt_congested_bps_relay = None
-        lost_pkt_congested_bps_UAVs = None
-        lost_pkt_expired_bps_UAVs = None
-        lost_pkt_expired_bps_relay = None
-
-       # latency_avg = None
-        latency = None
-        total_lat = None
-
     #    print('\n\ndelta_msg_varying: ', delta_msg_varying, '\n\n')
         if state == 'RECEIVED':
           #  print('DATA ANALIZER ive recive the  pkt:', identification)
@@ -107,13 +93,14 @@ class data_analizer:
             # total number of bits generated
             self.numb_tot_bit_generated += size_pkt
 
+            #used for the comoutation of the latency of the whole file, i.e the whole jpg or json
             if latency_pkts == -1:
                 total_lat = latency
             else:
                 total_lat = latency_pkts
 
             if total_lat is not None:  # Verifica se total_lat è un valore numerico valido
-                self.latency_summation += total_lat
+                self.latency_summation += total_lat#somma le latenze che poi verrano mediate
                 if queue_owner == 'relay':
                     self.latency_sum_relay += total_lat
                 else:
@@ -132,12 +119,14 @@ class data_analizer:
                 self.numb_uav_bit_rx += size_pkt
                 self.n_pkt_received_uav += 1
 
+            #generally computed the number od received pkts
             self.n_pkt_received += 1
             self.n_tot_pkt_generated += 1
             self.n_pkt_generated_in_dt += 1
 
             # latency
             latency_tot = self.latency_summation / self.n_pkt_received
+          #average the latency in function of the number of the received pkts
             if self.n_pkt_received_relay > 0:
                 self.latency_relay = self.latency_sum_relay / self.n_pkt_received_relay
             else:
@@ -147,8 +136,7 @@ class data_analizer:
             else:
                 self.latency_UAVs = 0
 
-      #      print('n pkt received: ',self.n_pkt_received )
-
+            #compute the throughput
             self.THROUGHPUT_tot = self.numb_tot_bit_rx / sim_time
             self.THROUGHPUT_relay = self.numb_relay_bit_rx / sim_time
             self.THROUGHPUT_UAVs = self.numb_uav_bit_rx / sim_time
@@ -156,7 +144,7 @@ class data_analizer:
             # Write data to CSV file
             with open('data_throughput.csv', 'a', newline='') as file:
                 writer = csv.writer(file)
-
+            #write the whole parameters about the throughput in the file
                 # Write header if the file is newly created
                 if not self.file_exists1:
                     writer.writerow(
@@ -173,9 +161,10 @@ class data_analizer:
                      pkt_type, size_pkt, cnt_packet_sent, total_pkt, state, latency, total_lat,
                      self.THROUGHPUT_tot, self.THROUGHPUT_relay, self.THROUGHPUT_UAVs, total_load, delta_msg_varying,
                      interval_time_ch_idle])
-            #      print('DATA ANALIZER 2 sono stati trascritti su csv simtime: ', sim_time)
+
 
             # Write data to CSV file
+          # write the whole parameters about the latency in the file
             with open('data_latency.csv', 'a', newline='') as file:
                 writer = csv.writer(file)
 
@@ -196,7 +185,8 @@ class data_analizer:
                      latency_tot, self.latency_relay, self.latency_UAVs, delta_msg_varying
                      ])
             #   print('DATA ANALIZER 2 sono stati trascritti su csv simtime: ', sim_time)
-
+        # compute the bit lost given a specific state indicating the reason why the pkt is removed
+        #so first sum up all the bit of the pkts that have been losot and then average it over the simulation time
         elif state == 'removed - congestion':
             # total number of bits generated
             self.numb_tot_bit_generated += size_pkt
@@ -252,6 +242,7 @@ class data_analizer:
             with open('data_bitloss.csv', 'a', newline='') as file:
                 writer = csv.writer(file)
                 # Write header if the file is newly created
+                #write the whole parameters about the bit loos in the file
                 if not self.file_exists2:
                     writer.writerow(
                         ['sim time[s]', 'generated time[s]', 'received time[s]', 'queue_owner', 'ID UAV', 'ID pkt',
