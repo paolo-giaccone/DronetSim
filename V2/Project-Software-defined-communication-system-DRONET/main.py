@@ -913,9 +913,7 @@ class Simulation():
         # move each cloud
         for cloud_each in self.clouds:
             (T, w, wind_angle, flag_pos) = self.check_position(cloud_each.cloud_x)
-            cloud_each.cloud_motion(time_interval, self.GS_coord[0], self.GS_coord[1], SCALE_FACTOR, w, wind_angle,
-                                    self.cloud_radius,
-                                    self.cloud_type)
+            cloud_each.cloud_motion(time_interval, self.GS_coord[0], self.GS_coord[1], SCALE_FACTOR, w, wind_angle)
         # evaluate the current Bit_Rate in function of the distance #
         self.relay.drone.bitrate_fun(SCALE_FACTOR)
         # obstacles effect on the bit rate #
