@@ -1,3 +1,26 @@
+# Copyright 2023 Cuzzi Andrea
+#           2023 Logruosso Loredana
+#           2023 Nepote Luca
+#
+# This file is part of DronetSim.
+#
+# DronetSim is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# any later version.
+#
+# DronetSim is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DronetSim. If not, see <http://www.gnu.org/licenses/gpl-2.0.html>.
+#
+# The authors and contributors are listed in the following line:
+# Cuzzi Andrea, Logruosso Loredana, Nepote Luca
+
+
 ### IMPORT OF USEFUL LIBRARIES ###
 
 import math
@@ -126,11 +149,6 @@ class Simulation():
             self.gamma = GAMMA_PAR
             self.gamma2 = -GAMMA_PAR
 
-            # Clouds
-            self.N_clouds = N_clouds
-
-            # Missing
-            self.N_missing = N_missing
 
             # Ardupilot - Mission Planning
             self.ARDUPILOT = ARDUPILOT
@@ -156,10 +174,10 @@ class Simulation():
             self.gamma2 = Param_init.gamma2
 
             # Clouds
-            self.N_clouds = Param_init.numb_clouds
+            N_clouds = Param_init.numb_clouds
 
             # Missing
-            self.N_missing = Param_init.numb_missing
+            N_missing = Param_init.numb_missing
 
             # Ardupilot - Mission Planning
             self.ARDUPILOT = Param_init.ardupilot_flag
@@ -328,7 +346,7 @@ class Simulation():
         cloud_size = [300, 200]
 
         # clouds creation
-        for i in range(self.N_clouds):
+        for i in range(N_clouds):
             cloud_pos_in = [random.randint(0, self.SCREEN_WIDTH), random.randint(0, self.HEIGHT_game)]
             self.clouds.append(
                 clouds(cloud_pos_in[0], cloud_pos_in[1], self.SCREEN_WIDTH, self.HEIGHT_game))
