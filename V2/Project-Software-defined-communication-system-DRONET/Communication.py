@@ -147,7 +147,7 @@ class Communication:
         priority_of_pkt = 0 #image has priority 0
         pkt_owner = UAV.id
         type_pkt = 'jpg'
-
+        type_pkt_first_inserted = 'json' #initialize it
         flag_first_pkt_to_be_served = self.check_queue_empty(UAV.queue) #check if the pkts that have to be inserted are the first ones to be tx
 
         flag_pkts_can_be_inserted1 = self.check_queue_availability(numb_pkt + 1, UAV.queue) #check if there is enough space in the queue for containg the whole image + json file
@@ -163,6 +163,7 @@ class Communication:
                 size_pkt = size_image
 
             if flag_pkts_can_be_inserted1:  # enough space to insert the whole image
+                type_pkt_first_inserted = 'jpg'
                 tuple_tx = (sim_time, 'queue', pkt_owner, type_pkt, size_pkt,
                             priority_of_pkt, cnt, numb_pkt, UAV.pkt_id)
                 UAV.queue.put(tuple_tx)
@@ -186,12 +187,13 @@ class Communication:
             tuple_tx = (sim_time, 'queue', pkt_owner, 'json', self.size_json,
                         1, 1, 1, UAV.pkt_id)
             UAV.queue.put(tuple_tx) #inser the pkt
+
             # check if the pkt freshly inserted is the first one in the pkt or there are others to be served
             if flag_first_pkt_to_be_served:
                 if UAV.bitrate > 0:
                     self.channel_communication(UAV, None, sim_time, delta_msg_varying )
                 else:
-                    if type_pkt == 'jpg':
+                    if type_pkt_first_inserted == 'jpg':
                         priority_of_pkt = 0
                         size_pkt = self.size_pkt
                     else:
