@@ -5,7 +5,21 @@ The repository provides a UAV simulator developed with the course "Project: Soft
 The work has been motivated by __Flagship project__ **Space4You** within **NODES** project, which has received funding from the __MUR – Missione 4__, Componente 2, Investimento 1.5 – Creazione e rafforzamento di “**Ecosistemi dell’innovazione**”, costruzione di “leader territoriali di R&S” – del PNRR with grant agreement no. ECS00000036.
 
 The UAV simulator is aimed at investigating a basic scenario in which generic airborn vehicles move in a given area and communicate within a multihop fashion. The simulation model captures many aspects:
-- realistic communication model 
+- flexible communication model 
 - temperature effects on battery duration
 - environment effects on the mobility (e.g., wind)
+- cooperative multihop communication between UAV
 
+A GUI is provided to show in real time the currect state of the simulation.
+
+DronetSim can be also integrated with UAV mission planners.
+
+The main assumptions behind the simulation model are the following:
+- ideal MAC, i.e., without collisions
+- no queueing on the relay nodes
+
+## Folder structure
+
+- V2: DronetSim python code
+- Doc: Main documentation, with manual and report showing some simulation results under some meaningful scenarios
+- Scripts: auxiliaty files to process the simulation output  
